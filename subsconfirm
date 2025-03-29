@@ -1,0 +1,165 @@
+#!/usr/bin/perl
+use warnings;
+use strict;
+use POSIX qw(strftime);
+
+use Email::Sender::Simple qw(sendmail);
+use Email::Sender::Transport::SMTP ();
+use Email::Simple ();
+use Email::Simple::Creator ();
+
+# Constants
+my $VERSION = "1.0";
+my $DATAFILE = "subs.csv";
+my $date = strftime("%Y-%m-%d", localtime);
+my $rcfilename = "subsconfirm.prefs";
+my $DEBUGMODE = "no";
+my $EDITOR = "nano";
+my $SMTPSERVER = "yahoo.com";
+my $SMTPPORT = 25;
+my $SMTPUSER = "usernotset";
+my $SMTPPASSWORD = "passwordnotset";
+my $SMTPSENDER = "senderaddrnotset";
+my $CURSTATUS = "";
+my $CURPROVIDER = "";
+my $CURDOMAIN = "";
+my $CUROWNER = "";
+my $NOTICEDATE = "";
+
+# ----
+
+# See if the EDITOR env var is set, use it if so
+if ($ENV{'EDITOR'})
+{
+        $EDITOR = $ENV{'EDITOR'};
+}
+
+sub DebugPrint
+{
+        if ($DEBUGMODE eq "debug")
+        {
+                print $_;
+        }
+}
+
+my $defaultfile = <<'END_TEMPLATE';
+# SMTP Server
+yahoo.com
+# SMTP Port
+25
+# SMTP User
+username
+# SMTP Password
+password
+# SMTP Sender Addr
+sender_email
+# Get more apps like this at https://marisa-apps.retro-os.live
+END_TEMPLATE
+
+if (! -f $rcfilename)
+{
+        print "Settings file $rcfilename not found, creating it...\n";
+        open(FILEOUT, '>', $rcfilename) or die $!;
+        #        print FILEOUT "$defaultfile\n";
+        print FILEOUT "$defaultfile";
+        close(FILEOUT);
+        system("$EDITOR $rcfilename");
+        exit(0);
+}
+
+open(FILEIN, '<', $rcfilename) or die $!;
+my $LastLine = 0;
+while(<FILEIN>)
+{
+        # print $_;
+        if ((substr($_, 0, 1) eq "#") || ($_ eq ""))
+        {
+                # skip over comments
+                next;
+        }
+        chop();
+        if ($LastLine == 0)
+        {
+                $SMTPSERVER = $_;
+                $LastLine++;
+                DebugPrint("saw SMTPSERVER '$SMTPSERVER'\n");
+                next;
+        }
+        elsif ($LastLine == 1)
+        {
+                $SMTPPORT = $_;
+                DebugPrint("saw SMTP Port '$SMTPPORT'\n");
+                $LastLine++;
+                next;
+        }
+        elsif ($LastLine == 2)
+        {
+                $SMTPUSER = $_;
+                DebugPrint("saw SMTP User '$SMTPUSER'\n");
+                $LastLine++;
+                next;
+        }
+        elsif ($LastLine == 3)
+        {
+                $SMTPPASSWORD = $_;
+                DebugPrint("saw SMTP Port '$SMTPPASSWORD'\n");
+                $LastLine++;
+                next;
+        }
+        elsif ($LastLine == 4)
+        {
+                $SMTPSENDER = $_;
+                DebugPrint("saw SMTP Sender '$SMTPSENDER'\n");
+                $LastLine++;
+                next;
+        }
+}
+close(FILEIN);
+
+sub SendMail
+{
+	my $transport = Email::Sender::Transport::SMTP->new({
+		host => $SMTPSERVER,
+		port => $SMTPPORT,
+		sasl_username => $SMTPUSER,
+		sasl_password => $SMTPPASSWORD,
+	});
+
+	my $email = Email::Simple->create(
+		header => [
+		  To      => $CUROWNER,
+		  From    => $SMTPSENDER,
+		  Subject => "Regaurding your server: $CURDOMAIN",
+		],
+		body => "This is my message\n",
+	);
+
+	sendmail($email, { transport => $transport });
+}
+
+open(FILEIN, '<', $DATAFILE) or die $!;
+while(<FILEIN>)
+{
+        # print $_;
+        if ((substr($_, 0, 1) eq "#") || ($_ eq ""))
+        {
+                # skip over comments
+                next;
+        }
+        chop();
+	($CURSTATUS, $CURPROVIDER, $CURDOMAIN, $CUROWNER, $NOTICEDATE) = split(/,/, $_);
+	if ($CURSTATUS ne "active")
+	{
+		DebugPrint("Skipping $CURDOMAIN\n");
+		next;
+	}
+	print "Current Provider:\t$CURPROVIDER\n";
+	print "Current Domain:\t\t$CURDOMAIN\n";
+	print "Current Owner:\t\t$CUROWNER\n";
+	print "Last Send Date:\t\t$NOTICEDATE\n";
+#	SendMail();
+	print "=================\n";
+}
+close(FILEIN);
+
+exit 0;
