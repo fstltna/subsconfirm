@@ -152,6 +152,15 @@ END_TEMPLATE
 	system("$SENDMAIL_COMMAND $CUROWNER < $MAILTEMP");
 }
 
+print "About to start sending - confirm \[y/n\]: ";
+my $answer = <STDIN>;
+chop($answer);
+if (($answer ne "y") && ($answer ne "yes"))
+{
+	print "Not running update\n";
+	exit 0;
+}
+
 # Create the temporary file
 open(TEMPFILE, '>', $DATAFILETEMP) or die $!;
 
