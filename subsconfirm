@@ -20,6 +20,19 @@ my $SENDMAIL_COMMAND = "/usr/local/citadel/citmail";
 
 # ----
 
+print "subsconfirm v$VERSION\n";
+print "====================================\n";
+
+if (! -f $DATAFILE)
+{
+        print "List file $DATAFILE not found, creating it...\n";
+        open(FILEOUT, '>', $DATAFILE) or die $!;
+        print FILEOUT "# active, provider, domain, email, last sent date\n";
+	print FILEOUT "#active,ovh,testdomain.com,serverowner\@somedomain.com,today\n";
+        close(FILEOUT);
+        exit(0);
+}
+
 # See if the EDITOR env var is set, use it if so
 if ($ENV{'EDITOR'})
 {
@@ -34,6 +47,53 @@ sub DebugPrint
         }
 }
 
+sub DisplayHelp
+{
+	print "Unknown option, valid options are:\n";
+	print "\tlist - Display the entries in the data file\n";
+}
+
+sub DisplayList
+{
+	open(FILEIN, '<', $DATAFILE) or die $!;
+	while(<FILEIN>)
+	{
+	        # print $_;
+	        if ((substr($_, 0, 1) eq "#") || ($_ eq ""))
+	        {
+	                # skip over comments
+	                next;
+	        }
+	        chop();
+	        ($CURSTATUS, $CURPROVIDER, $CURDOMAIN, $CUROWNER, $NOTICEDATE) = split(/,/, $_);
+	        print "Current Status:\t\t$CURSTATUS\n";
+	        print "Current Provider:\t$CURPROVIDER\n";
+	        print "Current Domain:\t\t$CURDOMAIN\n";
+	        print "Current Owner:\t\t$CUROWNER\n";
+	        print "Last Send Date:\t\t$NOTICEDATE\n";
+	        print "#################\n";
+	}
+	close(FILEIN);
+	exit 0;
+}
+
+my $NumArgs = $#ARGV + 1;
+if ($NumArgs > 1)
+{
+	DisplayHelp();
+	exit 0;
+}
+if ($NumArgs == 1)
+{
+	if ($ARGV[0] ne "list")
+	{
+		DisplayHelp();
+		exit 0;
+	}
+	DisplayList();
+	exit 0;
+}
+exit 0;
 my $defaultfile = <<'END_TEMPLATE';
 # Sender Addr
 sender_email
@@ -89,17 +149,6 @@ END_TEMPLATE
         print(FILEOUT $MessageBody);
 	close(FILEOUT);
 	system("$SENDMAIL_COMMAND $CUROWNER < $MAILTEMP");
-}
-
-if (! -f $DATAFILE)
-{
-        print "List file $DATAFILE not found, creating it...\n";
-        open(FILEOUT, '>', $DATAFILE) or die $!;
-        print FILEOUT "# active, provider, domain, email, last sent date\n";
-	print FILEOUT "#active,ovh,testdomain.com,serverowner\@somedomain.com,today\n";
-        close(FILEOUT);
-        exit(0);
-
 }
 
 # Create the temporary file
