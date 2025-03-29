@@ -42,15 +42,7 @@ sub DebugPrint
 }
 
 my $defaultfile = <<'END_TEMPLATE';
-# SMTP Server
-yahoo.com
-# SMTP Port
-587
-# SMTP User
-username
-# SMTP Password
-password
-# SMTP Sender Addr
+# Sender Addr
 sender_email
 # Get more apps like this at https://marisa-apps.retro-os.live
 END_TEMPLATE
@@ -59,7 +51,6 @@ if (! -f $rcfilename)
 {
         print "Settings file $rcfilename not found, creating it...\n";
         open(FILEOUT, '>', $rcfilename) or die $!;
-        #        print FILEOUT "$defaultfile\n";
         print FILEOUT "$defaultfile";
         close(FILEOUT);
         system("$EDITOR $rcfilename");
@@ -79,34 +70,6 @@ while(<FILEIN>)
         chop();
         if ($LastLine == 0)
         {
-                $SMTPSERVER = $_;
-                $LastLine++;
-                DebugPrint("saw SMTPSERVER '$SMTPSERVER'\n");
-                next;
-        }
-        elsif ($LastLine == 1)
-        {
-                $SMTPPORT = $_;
-                DebugPrint("saw SMTP Port '$SMTPPORT'\n");
-                $LastLine++;
-                next;
-        }
-        elsif ($LastLine == 2)
-        {
-                $SMTPUSER = $_;
-                DebugPrint("saw SMTP User '$SMTPUSER'\n");
-                $LastLine++;
-                next;
-        }
-        elsif ($LastLine == 3)
-        {
-                $SMTPPASSWORD = $_;
-                DebugPrint("saw SMTP Port '$SMTPPASSWORD'\n");
-                $LastLine++;
-                next;
-        }
-        elsif ($LastLine == 4)
-        {
                 $SMTPSENDER = $_;
                 DebugPrint("saw SMTP Sender '$SMTPSENDER'\n");
                 $LastLine++;
@@ -117,16 +80,7 @@ close(FILEIN);
 
 sub SendMail
 {
-	my $transport = Email::Sender::Transport::SMTPS->new({
-		host => $SMTPSERVER,
-		ssl => 'starttls',
-		port => $SMTPPORT,
-		sasl_username => $SMTPUSER,
-		sasl_password => $SMTPPASSWORD,
-#		debug => 1,
-	});
-
-my $MessageBody = <<'END_TEMPLATE';
+	my $MessageBody = <<'END_TEMPLATE';
 This is a periodic request to confirm you still want the server "$CURDOMAIN". Please respond to let us know if you still want this server or if we can shut it down.
 
 Thanks for your attention!
@@ -134,14 +88,25 @@ END_TEMPLATE
 
 	my $email = Email::Simple->create(
 		header => [
-		  To      => $CUROWNER,
 		  From    => $SMTPSENDER,
+		  To      => $CUROWNER,
 		  Subject => "Regarding your server: $CURDOMAIN",
 		],
 		body => $MessageBody,
 	);
 
 	sendmail($email);
+}
+
+if (! -f $DATAFILE)
+{
+        print "List file $DATAFILE not found, creating it...\n";
+        open(FILEOUT, '>', $DATAFILE) or die $!;
+        print FILEOUT "# active, provider, domain, email, last sent date\n";
+	print FILEOUT "#active,ovh,testdomain.com,serverowner\@somedomain.com,today\n";
+        close(FILEOUT);
+        exit(0);
+
 }
 
 open(FILEIN, '<', $DATAFILE) or die $!;
