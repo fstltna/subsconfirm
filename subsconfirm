@@ -93,7 +93,7 @@ if ($NumArgs == 1)
 	DisplayList();
 	exit 0;
 }
-exit 0;
+
 my $defaultfile = <<'END_TEMPLATE';
 # Sender Addr
 sender_email
