@@ -50,7 +50,8 @@ sub DebugPrint
 sub DisplayHelp
 {
 	print "Unknown option, valid options are:\n";
-	print "\tlist - Display the entries in the data file\n";
+	print "\tsubsconfirm \[list\]\n";
+	print "\t\tlist - Display the entries in the data file\n";
 }
 
 sub DisplayList
