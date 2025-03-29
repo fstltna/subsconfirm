@@ -6,7 +6,7 @@ use POSIX qw(strftime);
 # Constants
 my $VERSION = "1.0";
 my $DATAFILE = "subs.csv";
-my $date = strftime("%Y-%m-%d", localtime);
+my $DATAFILETEMP = "/tmp/subs.new";
 my $rcfilename = "subsconfirm.prefs";
 my $DEBUGMODE = "no";
 my $EDITOR = "nano";
@@ -102,6 +102,10 @@ if (! -f $DATAFILE)
 
 }
 
+# Create the temporary file
+open(TEMPFILE, '>', $DATAFILETEMP) or die $!;
+
+# Open the data file and start parsing it
 open(FILEIN, '<', $DATAFILE) or die $!;
 while(<FILEIN>)
 {
@@ -109,6 +113,7 @@ while(<FILEIN>)
         if ((substr($_, 0, 1) eq "#") || ($_ eq ""))
         {
                 # skip over comments
+		print TEMPFILE "$_";
                 next;
         }
         chop();
@@ -116,6 +121,7 @@ while(<FILEIN>)
 	if ($CURSTATUS ne "active")
 	{
 		DebugPrint("Skipping $CURDOMAIN\n");
+		print TEMPFILE "$_";
 		next;
 	}
 	print "Current Provider:\t$CURPROVIDER\n";
@@ -123,8 +129,11 @@ while(<FILEIN>)
 	print "Current Owner:\t\t$CUROWNER\n";
 	print "Last Send Date:\t\t$NOTICEDATE\n";
 	SendMail();
+	my $date = strftime("%Y-%m-%d", localtime);
+	print TEMPFILE "active,$CURPROVIDER,$CURDOMAIN,$CUROWNER,$date\n";
 	print "=================\n";
 }
 close(FILEIN);
-
+close(TEMPFILE);
+system ("mv $DATAFILETEMP $DATAFILE");
 exit 0;
