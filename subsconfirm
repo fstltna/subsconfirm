@@ -3,10 +3,9 @@ use warnings;
 use strict;
 use POSIX qw(strftime);
 
+use Email::Simple;
+use Email::Simple::Creator;
 use Email::Sender::Simple qw(sendmail);
-use Email::Sender::Transport::SMTP ();
-use Email::Simple ();
-use Email::Simple::Creator ();
 
 # Constants
 my $VERSION = "1.0";
@@ -16,7 +15,7 @@ my $rcfilename = "subsconfirm.prefs";
 my $DEBUGMODE = "no";
 my $EDITOR = "nano";
 my $SMTPSERVER = "yahoo.com";
-my $SMTPPORT = 25;
+my $SMTPPORT = 587;
 my $SMTPUSER = "usernotset";
 my $SMTPPASSWORD = "passwordnotset";
 my $SMTPSENDER = "senderaddrnotset";
@@ -46,7 +45,7 @@ my $defaultfile = <<'END_TEMPLATE';
 # SMTP Server
 yahoo.com
 # SMTP Port
-25
+587
 # SMTP User
 username
 # SMTP Password
@@ -118,23 +117,31 @@ close(FILEIN);
 
 sub SendMail
 {
-	my $transport = Email::Sender::Transport::SMTP->new({
+	my $transport = Email::Sender::Transport::SMTPS->new({
 		host => $SMTPSERVER,
+		ssl => 'starttls',
 		port => $SMTPPORT,
 		sasl_username => $SMTPUSER,
 		sasl_password => $SMTPPASSWORD,
+#		debug => 1,
 	});
+
+my $MessageBody = <<'END_TEMPLATE';
+This is a periodic request to confirm you still want the server "$CURDOMAIN". Please respond to let us know if you still want this server or if we can shut it down.
+
+Thanks for your attention!
+END_TEMPLATE
 
 	my $email = Email::Simple->create(
 		header => [
 		  To      => $CUROWNER,
 		  From    => $SMTPSENDER,
-		  Subject => "Regaurding your server: $CURDOMAIN",
+		  Subject => "Regarding your server: $CURDOMAIN",
 		],
-		body => "This is my message\n",
+		body => $MessageBody,
 	);
 
-	sendmail($email, { transport => $transport });
+	sendmail($email);
 }
 
 open(FILEIN, '<', $DATAFILE) or die $!;
@@ -157,7 +164,7 @@ while(<FILEIN>)
 	print "Current Domain:\t\t$CURDOMAIN\n";
 	print "Current Owner:\t\t$CUROWNER\n";
 	print "Last Send Date:\t\t$NOTICEDATE\n";
-#	SendMail();
+	SendMail();
 	print "=================\n";
 }
 close(FILEIN);
