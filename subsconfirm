@@ -17,6 +17,7 @@ my $CURDOMAIN = "";
 my $CUROWNER = "";
 my $NOTICEDATE = "";
 my $SENDMAIL_COMMAND = "/usr/local/citadel/citmail";
+my $MINDAYS = 28;
 
 # ----
 
@@ -71,7 +72,8 @@ sub DisplayList
 	        print "Current Provider:\t$CURPROVIDER\n";
 	        print "Current Domain:\t\t$CURDOMAIN\n";
 	        print "Current Owner:\t\t$CUROWNER\n";
-	        print "Last Send Date:\t\t$NOTICEDATE\n";
+		my $humandate = strftime("%Y-%m-%d", $NOTICEDATE);
+	        print "Last Send Date:\t\t$humandate\n";
 	        print "#################\n";
 	}
 	close(FILEIN);
@@ -183,12 +185,20 @@ while(<FILEIN>)
 		print TEMPFILE "$_";
 		next;
 	}
+	my $currentdate = localtime;
+	if ((($currentdate - $NOTICEDATE) / (60 * 60 * 24)) < $MINDAYS)
+	{
+		print "Skipping $CURDOMAIN...\n";
+		print TEMPFILE "$_";
+		next;
+	}
+	my $date = localtime;
+	my $humandate = strftime("%Y-%m-%d", $date);
 	print "Current Provider:\t$CURPROVIDER\n";
 	print "Current Domain:\t\t$CURDOMAIN\n";
 	print "Current Owner:\t\t$CUROWNER\n";
-	print "Last Send Date:\t\t$NOTICEDATE\n";
+	print "Last Send Date:\t\t$humandate\n";
 	SendMail();
-	my $date = strftime("%Y-%m-%d", localtime);
 	print TEMPFILE "active,$CURPROVIDER,$CURDOMAIN,$CUROWNER,$date\n";
 	print "=================\n";
 }
